@@ -10,16 +10,17 @@ UI_WIDTH = 400
 border = 50
 
 pygame.init()
-sysFont = pygame.font.SysFont(None, 30)
 display = pygame.display.set_mode((WIDTH+UI_WIDTH,HEIGHT))
 manager = pygame_gui.UIManager((UI_WIDTH,HEIGHT))
 elements = []
 
-population = 100
+population = 200
 infected = 2
 infectionRadius = 30
-infectionChance = 1
-infectionDuration = 10
+infectionChance = 40
+infectionDuration = 14
+quarantine = False
+quarantineStart = 4
 
 quit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, HEIGHT-110), (100, 50)),
                                              text='Quit',
@@ -27,6 +28,11 @@ quit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, HEIGHT
 start_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((UI_WIDTH-110, HEIGHT-110), (100, 50)),
                                              text='Start',
                                              manager=manager)
+stop_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((UI_WIDTH/2-50, HEIGHT-110), (100, 50)),
+                                             text='Stop',
+                                             manager=manager)
+stop_button.disable()
+
 elements.append(quit_button)
 elements.append(start_button)
 
@@ -108,7 +114,7 @@ elements.append(infectionChanceLabel)
 
 infectionDurationSlider = pygame_gui.elements.UIHorizontalSlider(relative_rect=pygame.Rect((50, 225), (300, 20)),
                                             start_value=infectionDuration,
-                                            value_range=(5,60),
+                                            value_range=(1,60),
                                             manager=manager
                                             )
 _infDur = pygame_gui.elements.UILabel(relative_rect = pygame.Rect((100,205),(200,20)),
@@ -125,22 +131,68 @@ elements.append(infectionDurationSlider)
 elements.append(_infDur)
 elements.append(infectionDurationLabel)
 
+quarantine_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((190, 275), (20, 20)),
+                                                 text = " ",
+                                             manager=manager)
+_quar = pygame_gui.elements.UILabel(relative_rect = pygame.Rect((100,250),(200,20)),
+                                              text = "quarantine",
+                                              manager=manager,
+                                              parent_element = quarantine_button
+                                              )
+quarantineLabel = pygame_gui.elements.UILabel(relative_rect = pygame.Rect((145,275),(40,20)),
+                                              text = str(quarantine),
+                                              manager=manager,
+                                              parent_element = quarantine_button
+                                              )
+elements.append(quarantine_button)
+elements.append(_quar)
+elements.append(quarantineLabel)
+
+
+quarantineStartSlider = pygame_gui.elements.UIHorizontalSlider(relative_rect=pygame.Rect((50,325), (300, 20)),
+                                            start_value=quarantineStart,
+                                            value_range=(1,59),
+                                            manager=manager
+                                            )
+_quarS = pygame_gui.elements.UILabel(relative_rect = pygame.Rect((100,305),(200,20)),
+                                              text = "quarantine Start",
+                                              manager=manager,
+                                              parent_element = infectionDurationSlider
+                                              )
+quarantineStartLabel = pygame_gui.elements.UILabel(relative_rect = pygame.Rect((10,325),(40,20)),
+                                              text = str(quarantineStart),
+                                              manager=manager,
+                                              parent_element = infectionDurationSlider
+                                              )
+
+elements.append(quarantineStartSlider)
+elements.append(_quarS)
+elements.append(quarantineStartLabel)
+
 class person:
     def __init__(self):
-        self.pos = np.array((UI_WIDTH+WIDTH*np.random.random(),HEIGHT*np.random.random()))
+        self.pos = np.array((border+UI_WIDTH+(WIDTH-border)*np.random.random(),border+(HEIGHT-border)*np.random.random()))
         ang = np.random.random()*np.pi*2
         self.vel = np.array((np.cos(ang),np.sin(ang)))
         self.max_speed = 200
         self.max_steer = 50
-
+        
+        self.quarantine = False
         self.infected = False
         self.infection_duration = 0
         self.immune = False
         
     def update(self,delta):
-        offset = np.array((0,0))
-        offset[0] = absMax(max((UI_WIDTH+border) - self.pos[0],0),min((((UI_WIDTH+WIDTH) - self.pos[0]) - border),0))
-        offset[1] = absMax(max(border - self.pos[1],0),min(((HEIGHT -self.pos[1]) - border),0))
+        if self.quarantine:
+            offset = (np.array((UI_WIDTH/2,HEIGHT-260))-self.pos)
+            #print(np.linalg.norm(offset))
+            if np.linalg.norm(offset) < 90:
+                offset  = np.array((0,0))
+        else:
+            offset = np.array((0,0))
+            offset[0] = absMax(max((UI_WIDTH+border) - self.pos[0],0),min((((UI_WIDTH+WIDTH) - self.pos[0]) - border),0))
+            offset[1] = absMax(max(border - self.pos[1],0),min(((HEIGHT -self.pos[1]) - border),0))
+        
         if offset.any():
             self.vel += offset/3
         else:
@@ -150,10 +202,10 @@ class person:
             self.vel *= self.max_speed/np.linalg.norm(self.vel)   
         self.pos += self.vel * delta   
     def wander(self):
-        distance = 10
+        distance = 200
         initial_force = self.vel * distance/np.linalg.norm(self.vel)
         angle = np.random.random()*np.pi*2
-        angle = np.array((np.cos(angle),np.sin(angle)))
+        angle = np.array((np.cos(angle),np.sin(angle)))*50
         return initial_force + angle
     
     def draw(self):
@@ -176,123 +228,163 @@ setup = True
 
 last = time.time_ns()
 timer = 0
-
-while setup:
-    now = time.time_ns()
-    delta = (now-last)/(1000**3)
-    last = now
+while setup or simulation:
+    while setup:
+        now = time.time_ns()
+        delta = (now-last)/(1000**3)
+        last = now
     
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    setup = False
+            elif event.type == pygame.QUIT:
                 setup = False
-
-        if event.type == pygame.USEREVENT:
-            if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                if event.ui_element == quit_button:
-                    setup = False
-                elif event.ui_element == start_button:
-                    simulation = True
-                    setup = False
-                    for e in elements:
-                        e.disable()
+            elif event.type == pygame.USEREVENT:
+                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == quit_button:
+                        setup = False
+                    elif event.ui_element == start_button:
+                        simulation = True
+                        setup = False
+                        stop_button.enable()
+                        for e in elements:
+                            e.disable()
+                    elif event.ui_element == quarantine_button:
+                        quarantine = not quarantine
+                        quarantine_button.set_text("X" if quarantine else " ")
+                        quarantineLabel.set_text(str(quarantine))
                     
-            if event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
-                if event.ui_element == populationSlider:
-                    populationLabel.set_text(str(event.value))              
-                elif event.ui_element == infectedSlider:
-                    infectedLabel.set_text(str(event.value))
-                elif event.ui_element == infectedRadiusSlider:
-                    infectedRadiusLabel.set_text(str(event.value))
-                elif event.ui_element == infectionChanceSlider:
-                    infectionChanceLabel.set_text(str(event.value))
-                elif event.ui_element == infectionDurationSlider:
-                    infectionDurationLabel.set_text(str(event.value))
-                    
-        manager.process_events(event)
+                elif event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
+                    if event.ui_element == populationSlider:
+                        populationLabel.set_text(str(event.value))              
+                    elif event.ui_element == infectedSlider:
+                        infectedLabel.set_text(str(event.value))
+                    elif event.ui_element == infectedRadiusSlider:
+                        infectedRadiusLabel.set_text(str(event.value))
+                    elif event.ui_element == infectionChanceSlider:
+                        infectionChanceLabel.set_text(str(event.value))
+                    elif event.ui_element == infectionDurationSlider:
+                        infectionDurationLabel.set_text(str(event.value))
+                    elif event.ui_element == quarantineStartSlider:
+                        quarantineStartLabel.set_text(str(event.value))
+            manager.process_events(event)
 
-    manager.update(delta)
+        manager.update(delta)
 
-    display.fill((51,51,51))
+        display.fill((51,51,51))
     
-    manager.draw_ui(display)
-    pygame.draw.line(display,(0,0,0),(UI_WIDTH,0),(UI_WIDTH,HEIGHT),2)
-    pygame.display.update()
+        manager.draw_ui(display)
+        pygame.draw.line(display,(0,0,0),(UI_WIDTH,0),(UI_WIDTH,HEIGHT),2)
+        pygame.display.update()
 
-population = int(populationLabel.text)
-infected = int(infectedLabel.text)
-infectionRadius = int(infectedRadiusLabel.text)
-infectionChance = int(infectionChanceLabel.text)
-infectionDuration = int(infectionDurationLabel.text)
-
-data = {
-'sick' : [int(population*infected/100)],
-'healthy' : [population-int(population*infected/100)],
-'immune' : [0]
-    }
-
-healthy = [person() for i in range(population-int(population*infected/100))]
-sick = [person() for i in range(int(population*infected/100))]
-immune = []
-for s in sick:
-    s.infected = True
+    population = int(populationLabel.text)
+    infected = int(infectedLabel.text)
+    infectionRadius = int(infectedRadiusLabel.text)
+    infectionChance = int(infectionChanceLabel.text)
+    infectionDuration = int(infectionDurationLabel.text)
+    #quarantine 
+    quarantineStart = int(quarantineStartLabel.text)
     
-while simulation:
+    data = {
+    'sick' : [max(int(population*infected/100),1)],
+    'healthy' : [population-max(int(population*infected/100),1)],
+    'immune' : [0]
+        }
 
-    now = time.time_ns()
-    delta = (now-last)/(1000**3)
-    last = now
-    timer += delta
+    healthy = [person() for i in range(population-max(int(population*infected/100),1))]
+    sick = [person() for i in range(max(int(population*infected/100),1))]
+    immune = []
+    for s in sick:
+        s.infected = True
     
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+    while simulation:
+
+        now = time.time_ns()
+        delta = (now-last)/(1000**3)
+        last = now
+        timer += delta
+        
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    simulation = False
+            if event.type == pygame.QUIT:
                 simulation = False
-        manager.process_events(event)
-                
-    if timer > 1:
-        timer = 0
-        if len(sick) == 0:
-            simulation = False
-            break
-        for s in sick:
-            for h in healthy:
-                if np.linalg.norm(s.pos - h.pos) < infectionRadius and np.random.random()*100 < infectionChance:
-                    h.infected = True
-                    healthy.remove(h)
-                    sick.insert(0,h)
-                        
-            s.infection_duration += 1
-            if s.infection_duration > infectionDuration:
-                s.infected = False
-                s.immune = True
-                sick.remove(s)
+            if event.type == pygame.USEREVENT:
+                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == stop_button:
+                        simulation = False
+                        setup = True
+                        stop_button.disable()
+                        for e in elements:
+                            e.enable()
+            manager.process_events(event)
+                    
+        if timer > 1:
+            to_remove = []
+            to_add = []
+            timer = 0
+            
+            if len(sick) == 0:
+                simulation = False
+                break
+            
+            for s in sick:
+                s.infection_duration += 1
+                if s.quarantine:
+                    if s.infection_duration > infectionDuration:
+                        s.infected = False
+                        s.immune = True
+                        to_remove.append(s)                   
+                    continue
+                for h in healthy:
+                    if np.linalg.norm(s.pos - h.pos) < infectionRadius and np.random.random()*100 < infectionChance and not h.infected:
+                        h.infected = True
+                        to_add.append(h)
+                            
+                if quarantine and s.infection_duration > quarantineStart and not s.quarantine:
+                    s.quarantine = True
+                    s.pos = (UI_WIDTH/2,HEIGHT-260)
+                    s.max_speed = 100
+                if s.infection_duration > infectionDuration:
+                    s.infected = False
+                    s.immune = True
+                    to_remove.append(s)
+                    
+            for s in to_remove:
                 immune.append(s)
+                sick.remove(s)
+            for h in to_add:
+                sick.append(h)
+                healthy.remove(h)
                 
-        data['sick'].append(len(sick))
-        data['healthy'].append(len(healthy)) 
-        data['immune'].append(len(immune))
-        
-    display.fill((51,51,51))
+            data['sick'].append(len(sick))
+            data['healthy'].append(len(healthy)) 
+            data['immune'].append(len(immune))
+                
+        display.fill((51,51,51))
 
-    manager.update(delta)
-   
-    
-    for s in sick:  
-        s.update(delta)
-        s.draw()
+        manager.update(delta)       
         
-    for h in healthy:  
-        h.update(delta)
-        h.draw()
-        
-    for i in immune:
-        i.update(delta)
-        i.draw()
-
-    pygame.draw.line(display,(0,0,0),(UI_WIDTH,0),(UI_WIDTH,HEIGHT),2)
-    manager.draw_ui(display)
-    pygame.display.update()
+        for s in sick:  
+            s.update(delta)
+            s.draw()
+            
+        for h in healthy:  
+            h.update(delta)
+            h.draw()
+            
+        for i in immune:
+            i.update(delta)
+            i.draw()
+            
+        if quarantine:
+            pygame.draw.circle(display,(0,0,0),(UI_WIDTH/2,HEIGHT-260),100,2)
+            
+        pygame.draw.line(display,(0,0,0),(UI_WIDTH,0),(UI_WIDTH,HEIGHT),2)
+        manager.draw_ui(display)
+        pygame.display.update()
     
 
 pygame.quit()
