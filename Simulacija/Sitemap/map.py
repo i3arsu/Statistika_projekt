@@ -24,7 +24,7 @@ def plot_results(result_fin):
         if country[0] == 'HKG':
             continue # no data
 
-        popup = folium.Popup(folium.IFrame(country[0]+': '+"%.3f" % case_sum, width=180, height=38), max_width=500)
+        popup = folium.Popup(folium.IFrame(country[0]+': '+str(round(case_sum*100,2))+ ' %', width=130, height=34), max_width=500)
         
         radius = case_sum*250
         
