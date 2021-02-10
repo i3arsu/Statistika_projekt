@@ -33,10 +33,11 @@ def create_geojson_features(df):
                     'radius': 1
                 }
             }
-        }
+        } # to start from 1.1.2020.
+    
     features.append(feature)
         
-    s = 255/max((df['total_cases']/df['population']))
+    s = 255/max((df['total_cases']/df['population'])) # biggest data value to color
     
     for _, row in df.iterrows():
         if isnan(row['total_cases']): #or row['continent'] != 'Europe':
@@ -44,7 +45,7 @@ def create_geojson_features(df):
         if datetime.fromisoformat(row['date']).timestamp()%604800 != 514800:
             continue
 
-        gb = 255-int(((row['total_cases']/row['population']))*s)
+        gb = 255-int(((row['total_cases']/row['population']))*s) # map data to a color (shade of red)
         color = '#ff'+"{0:#0{1}x}".format(gb,4)[2:]*2
  
         feature = {

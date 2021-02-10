@@ -10,20 +10,22 @@ import time
 WIDTH = 1100
 HEIGHT= 800
 UI_WIDTH = 400
-border = 50
+border = 50 # distance from edge where people start beeing repelled 
 
 pygame.init()
 display = pygame.display.set_mode((WIDTH+UI_WIDTH,HEIGHT))
 manager = pygame_gui.UIManager((UI_WIDTH,HEIGHT))
 elements = []
 
-population = 200
-infected = 2
-infectionRadius = 30
-infectionChance = 40
-infectionDuration = 14
+population = 200 # number of people in the simulation
+infected = 2 # percantage of people infected at the start
+infectionRadius = 30 # how close does a person need to be to a infetcted to get infected
+infectionChance = 40 # chance that a person will get infected every tick
+infectionDuration = 14 # duration of the infection in ticks
 quarantine = False
 quarantineStart = 4
+
+## UI START ##
 
 quit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, HEIGHT-110), (100, 50)),
                                              text='Quit',
@@ -172,6 +174,9 @@ elements.append(quarantineStartSlider)
 elements.append(_quarS)
 elements.append(quarantineStartLabel)
 
+## UI END ##
+
+
 class person:
     def __init__(self):
         self.pos = np.array((border+UI_WIDTH+(WIDTH-border)*np.random.random(),border+(HEIGHT-border)*np.random.random()))
@@ -196,28 +201,29 @@ class person:
             offset[0] = absMax(max((UI_WIDTH+border) - self.pos[0],0),min((((UI_WIDTH+WIDTH) - self.pos[0]) - border),0))
             offset[1] = absMax(max(border - self.pos[1],0),min(((HEIGHT -self.pos[1]) - border),0))
         
-        if offset.any():
+        if offset.any(): # repel if near edge
             self.vel += offset/3
         else:
             steering = self.wander()
-            steering *= self.max_steer/np.linalg.norm(steering)
+            steering *= self.max_steer/np.linalg.norm(steering) # limit
             self.vel += steering
-            self.vel *= self.max_speed/np.linalg.norm(self.vel)   
-        self.pos += self.vel * delta   
+            self.vel *= self.max_speed/np.linalg.norm(self.vel) # limit
+        self.pos += self.vel * delta
+        
     def wander(self):
-        distance = 200
-        initial_force = self.vel * distance/np.linalg.norm(self.vel)
-        angle = np.random.random()*np.pi*2
-        angle = np.array((np.cos(angle),np.sin(angle)))*50
-        return initial_force + angle
+        distance = 200 # distance to circle
+        initial_force = self.vel * distance/np.linalg.norm(self.vel) # vector to circle center
+        angle = np.random.random()*np.pi*2 # random angle
+        angle = np.array((np.cos(angle),np.sin(angle)))*50 # displacement vector
+        return initial_force + angle # wander vector
     
     def draw(self):
         if self.infected:
-            color = (255,20,20)
+            color = (255,20,20) # red = infected
         elif not self.immune:
-            color = (20,255,20)
+            color = (20,255,20) # green = healthy
         else:
-            color = (100,100,100)
+            color = (100,100,100)# gray = immune
         pygame.draw.circle(display,color,self.pos,5)
         
 def absMax(a,b):
@@ -226,7 +232,26 @@ def absMax(a,b):
     else:
         return b
     
+def plot():
+    ax.cla()
+    ax.stackplot(range(len(data['sick'])),data.values(),labels=data.keys(),colors=["#A31010","#1FA310","#A4A4A4"])
+    ax.legend(loc='upper left')
+    canvas = agg.FigureCanvasAgg(fig)
+    canvas.draw()
+    renderer = canvas.get_renderer()
+    raw_data = renderer.tostring_rgb()
+    size = canvas.get_width_height()
+    return pygame.image.fromstring(raw_data, size, "RGB")
 
+def enableUI(b):
+    if not b: # False = disable
+        stop_button.enable()
+        for e in elements:
+            e.disable()
+    else:
+        stop_button.disable()
+        for e in elements:
+            e.enable()
 
 simulation = False
 setup = True
@@ -241,27 +266,7 @@ fig, ax = plt.subplots(figsize=(10,8))
 ax.set_facecolor("#333333")
 fig.set_facecolor("#333333")
 
-def plot():
-    ax.cla()
-    ax.stackplot(range(len(data['sick'])),data.values(),labels=data.keys(),colors=["#A31010","#1FA310","#A4A4A4"])
-    ax.legend(loc='upper left')
-    canvas = agg.FigureCanvasAgg(fig)
-    canvas.draw()
-    renderer = canvas.get_renderer()
-    raw_data = renderer.tostring_rgb()
-    size = canvas.get_width_height()
-    return pygame.image.fromstring(raw_data, size, "RGB")
-
-def enableUI(b):
-    if not b:
-        stop_button.enable()
-        for e in elements:
-            e.disable()
-    else:
-        stop_button.disable()
-        for e in elements:
-            e.enable()
-            
+         
 while setup or simulation:
     if data != None:
             p = plot()
@@ -362,7 +367,7 @@ while setup or simulation:
                         
             manager.process_events(event)
                     
-        if timer > 1:
+        if timer > 1: # a tick = 1 second
             to_remove = []
             to_add = []
             timer = 0

@@ -13,7 +13,6 @@ result_fin = result.groupby(["iso_code",'continent',"Longitude", "Latitude"])#["
 result_fin = result_fin["new_cases"].sum()/result_fin["population"].mean()
 print(result_fin)
 
-
 def plot_results(result_fin):
     folium_map = folium.Map(location=[49.372, 11.023],
                             zoom_start=5,
@@ -38,6 +37,6 @@ def plot_results(result_fin):
 f_map = plot_results(result_fin)
 f_map.save("index.html")
 
-
-#Napraviti da crta krugove
-#Pocistiti malo dataset
+# TODO:
+# Napraviti da crta krugove
+# Pocistiti dataset
