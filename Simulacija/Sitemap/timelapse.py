@@ -4,11 +4,11 @@ import pandas as pd
 from math import isnan
 from datetime import datetime
 
-data1 = pd.read_csv (r'./owid-covid-data.csv')
+data1 = pd.read_csv ('/home/i3arsu/Desktop/Statistika_projekt/Statistika_projekt/Simulacija/Sitemap/owid-covid-data.csv')
 df1 = pd.DataFrame(data1, columns = ['iso_code', 'date', 'total_cases','population','continent'])
 
-data2 = pd.read_csv(r'./country_centroids_az8.csv')
-df2 = pd.DataFrame(data2, columns = ['iso_a3', 'Longitude', 'Latitude'])
+data2 = pd.read_csv('/home/i3arsu/Desktop/Statistika_projekt/Statistika_projekt/Simulacija/Sitemap/country_centroids_az8.csv')
+df2 = pd.DataFrame(data2, columns = ['iso_a3', 'Longitude', 'Latitude','name'])
 result = pd.merge(left = df1, right = df2, left_on = 'iso_code', right_on = 'iso_a3')
 
 print(result)
@@ -58,11 +58,12 @@ def create_geojson_features(df):
                 'time': row['date'].__str__(),
                 'style': {'color' : ''},
                 'icon': 'circle',
+                'popup': "Country:{name}<br>Population:{population}<br>Total Cases: {tcases}".format(name=row['name'], population = row['population'], tcases= row['total_cases']),
                 'iconstyle':{
                     'fillColor': color,
                     'fillOpacity': 0.8,
                     'stroke': 'true',
-                    'radius': 10
+                    'radius': 8
                 }
             }
         }
