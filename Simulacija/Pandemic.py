@@ -3,6 +3,7 @@ import pygame_gui
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import csv
 
 WIDTH = 1100
 HEIGHT= 800
@@ -405,4 +406,8 @@ ax.stackplot(range(len(data['sick'])),data.values(),labels=data.keys(),colors=["
 ax.legend(loc='upper left')
 plt.show()
 
-
+with open('simulation.csv',mode='w', newline='') as cf:
+    wr = csv.writer(cf)
+    wr.writerow(data.keys())
+    for i in range(len(data['sick'])):
+        wr.writerow([data['sick'][i],data['healthy'][i],data['immune'][i]])

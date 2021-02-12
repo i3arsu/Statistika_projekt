@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_agg as agg
 import time
+import csv
 
 WIDTH = 1100
 HEIGHT= 800
@@ -27,16 +28,21 @@ quarantineStart = 4
 
 ## UI START ##
 
-quit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, HEIGHT-110), (100, 50)),
+quit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((12.5, HEIGHT-110), (80, 50)),
                                              text='Quit',
                                              manager=manager)
-start_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((UI_WIDTH-110, HEIGHT-110), (100, 50)),
+start_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((112.5, HEIGHT-110), (80, 50)),
                                              text='Start',
                                              manager=manager)
-stop_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((UI_WIDTH/2-50, HEIGHT-110), (100, 50)),
+stop_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((212.5, HEIGHT-110), (80, 50)),
                                              text='Stop',
                                              manager=manager)
+save_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((312.5, HEIGHT-110), (80, 50)),
+                                             text='Save',
+                                             manager=manager)
+
 stop_button.disable()
+save_button.disable()
 
 elements.append(quit_button)
 elements.append(start_button)
@@ -245,10 +251,12 @@ def plot():
 
 def enableUI(b):
     if not b: # False = disable
+        
         stop_button.enable()
         for e in elements:
             e.disable()
     else:
+        save_button.disable()
         stop_button.disable()
         for e in elements:
             e.enable()
@@ -269,7 +277,8 @@ fig.set_facecolor("#333333")
          
 while setup or simulation:
     if data != None:
-            p = plot()
+        save_button.enable()
+        p = plot()
     while setup:
         now = time.time_ns()
         delta = (now-last)/(1000**3)
@@ -296,7 +305,13 @@ while setup or simulation:
                         quarantine = not quarantine
                         quarantine_button.set_text("X" if quarantine else " ")
                         quarantineLabel.set_text(str(quarantine))
-                    
+                    elif event.ui_element == save_button:
+                        with open('simulation.csv',mode='w', newline='') as cf:
+                            wr = csv.writer(cf)
+                            wr.writerow(data.keys())
+                            for i in range(len(data['sick'])):
+                                wr.writerow([data['sick'][i],data['healthy'][i],data['immune'][i]])
+                                
                 elif event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
                     if event.ui_element == populationSlider:
                         populationLabel.set_text(str(event.value))              
