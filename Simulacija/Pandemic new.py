@@ -308,9 +308,12 @@ while setup or simulation:
                     elif event.ui_element == save_button:
                         with open('simulation.csv',mode='w', newline='') as cf:
                             wr = csv.writer(cf)
-                            wr.writerow(data.keys())
+                            elements = list(data.keys())
+                            elements.append('total_cases')
+                            elements.append('population')
+                            wr.writerow(elements)
                             for i in range(len(data['sick'])):
-                                wr.writerow([data['sick'][i],data['healthy'][i],data['immune'][i]])
+                                wr.writerow([data['sick'][i],data['healthy'][i],data['immune'][i],total_cases[i],population])
                                 
                 elif event.user_type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
                     if event.ui_element == populationSlider:
@@ -351,6 +354,8 @@ while setup or simulation:
     'healthy' : [population-max(int(population*infected/100),1)],
     'immune' : [0]
         }
+
+    total_cases = [max(int(population*infected/100),1)]
     
     healthy = [person() for i in range(population-max(int(population*infected/100),1))]
     sick = [person() for i in range(max(int(population*infected/100),1))]
@@ -414,7 +419,8 @@ while setup or simulation:
                     s.infected = False
                     s.immune = True
                     to_remove.append(s)
-                    
+
+            total_cases.append(total_cases[-1]+len(to_add))        
             for s in to_remove:
                 immune.append(s)
                 sick.remove(s)
