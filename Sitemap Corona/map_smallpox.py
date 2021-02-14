@@ -4,9 +4,9 @@ import numpy as np
 from os import getcwd
 
 #Importamo datasetove
-data1 = pd.read_csv ('/home/i3arsu/Desktop/Statistika_projekt/Statistika_projekt/Sitemap Corona/number-of-reported-smallpox-cases.csv')
+data1 = pd.read_csv (getcwd()+'/number-of-reported-smallpox-cases.csv')
 df1 = pd.DataFrame(data1, columns = ['Entity', 'Code', 'Cases'])
-data2 = pd.read_csv('/home/i3arsu/Desktop/Statistika_projekt/Statistika_projekt/Sitemap Corona/country_centroids_az8.csv')
+data2 = pd.read_csv(getcwd()+'/country_centroids_az8.csv')
 df2 = pd.DataFrame(data2, columns = ['name', 'Longitude', 'Latitude'])
 #Spajamo oba dataseta tako da saznamo koordinate drzava
 result = pd.merge(left = df1, right = df2, left_on = 'Entity', right_on = 'name')
